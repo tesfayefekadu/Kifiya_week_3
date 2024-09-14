@@ -111,4 +111,61 @@ def claims_trend_over_time(df):
     plt.xticks(rotation=45)
     plt.show()
 
+# 1. Handling Missing Values
+def handle_missing_values(df):
+    # Drop columns with more than 50% missing values (adjust threshold as needed)
+    df_cleaned = df.dropna(thresh=len(df) * 0.5, axis=1)
+    
+    # Fill missing values in numerical columns with the median
+    numerical_cols, categorical_cols = identify_column_types(df_cleaned)
+    df_cleaned[numerical_cols] = df_cleaned[numerical_cols].fillna(df_cleaned[numerical_cols].median())
+    
+    # Fill missing values in categorical columns with mode
+    df_cleaned[categorical_cols] = df_cleaned[categorical_cols].fillna(df_cleaned[categorical_cols].mode().iloc[0])
+    
+    return df_cleaned
+
+# 2. Correcting Data Types
+def correct_data_types(df):
+    # Convert TransactionMonth to datetime
+    if 'TransactionMonth' in df.columns:
+        df['TransactionMonth'] = pd.to_datetime(df['TransactionMonth'], errors='coerce')
+    
+    # Convert numerical fields that might be incorrectly treated as objects
+    numeric_fields = ['TotalPremium', 'TotalClaims', 'SumInsured', 'CalculatedPremiumPerTerm']
+    for col in numeric_fields:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')  # Coerce invalid parsing to NaN
+    
+    return df
+
+# 3. Removing Duplicates
+def remove_duplicates(df):
+    # Remove duplicate rows
+    df_cleaned = df.drop_duplicates()
+    return df_cleaned
+
+# 4. Outlier Treatment (optional, using IQR method)
+def handle_outliers(df):
+    numerical_cols, _ = identify_column_types(df)
+    
+    for col in numerical_cols:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        # Define outliers as 1.5 times the IQR
+        df = df[~((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR)))]
+    
+    return df
+def clean_data(df):
+    df = handle_missing_values(df)
+    df = correct_data_types(df)
+    df = remove_duplicates(df)
+    df = handle_outliers(df)
+    
+    return df
+# Save the cleaned data to a CSV file
+def save_cleaned_data_csv(df, file_name):
+    df.to_csv(file_name, index=False)
+
 
